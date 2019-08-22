@@ -24,16 +24,16 @@ namespace SmartVisFaceAPI
             public string api_url;
         }
     
-        private static string auth_host = "http://192.168.86.38:10000";
-        private static string client_id = "48b009b1e9e651d806e91cc24a4239cdc28cabaafee51635f8b575f309db2d88";
-        private static string client_secret = "2ae6ac4addaac04f688e6c6c17f6bcad501ace832f6da64e2d027f6d6322c8f6";
-        private static string email = "demo@digitalbarriers.com";
-        private static string password = "Demo123123";
-        //private static string auth_host = "https://auth-eudemo.videoai.net";
-        //private static string client_id = "43468dddbbf113ed312ba65dbe3dbb329a5cfb3115c6a6b4343b54f5fce551fc";
-        //private static string client_secret = "1e4fd81af8d0551f51d20040bdcdd4336ebe612f82d62f7953ac364c882fdb05";
-        //private static string email = "kieron.messer@digitalbarriers.com";
-        //private static string password = "kieron123!";
+        //private static string auth_host = "http://192.168.86.38:10000";
+        //private static string client_id = "48b009b1e9e651d806e91cc24a4239cdc28cabaafee51635f8b575f309db2d88";
+        //private static string client_secret = "2ae6ac4addaac04f688e6c6c17f6bcad501ace832f6da64e2d027f6d6322c8f6";
+        //private static string email = "demo@digitalbarriers.com";
+        //private static string password = "Demo123123";
+        private static string auth_host = "https://auth-eudemo.videoai.net";
+        private static string client_id = "43468dddbbf113ed312ba65dbe3dbb329a5cfb3115c6a6b4343b54f5fce551fc";
+        private static string client_secret = "1e4fd81af8d0551f51d20040bdcdd4336ebe612f82d62f7953ac364c882fdb05";
+        private static string email = "kieron.messer@digitalbarriers.com";
+        private static string password = "kieron123!";
         private static string oauth_body_hash = "2jmj7l5rSw0yVb%2FvlWAYkK%2FYBwk%3D";
         private static string oauth_token = "a_single_token";
         private static string oauth_signature_method = "HMAC-SHA1";
