@@ -23,6 +23,13 @@ namespace SmartVisFaceAPI
             public string token;
             public string api_url;
         }
+
+        class MyHeaders
+        {
+            public string authorization;
+            public string device_data;
+        }
+        
     
         // You need to put your credentials and keys in here!
         private static string auth_host = "https://auth-eudemo.videoai.net";
@@ -79,6 +86,7 @@ namespace SmartVisFaceAPI
                     {
                         var jss = new JavaScriptSerializer();
                         var json = sr.ReadToEnd();
+                        //Console.WriteLine(json);
                         var json_object = jss.Deserialize<dynamic>(json);
                         return json_object;
                     }
@@ -91,87 +99,52 @@ namespace SmartVisFaceAPI
             return new System.Dynamic.ExpandoObject(); 
         }
         
-        private static MySession Login()
+        private static byte[] PostDataAsByteArray(SortedDictionary<string, string>  postData)
         {
-            string auth_endpoint = "/auth/api_login";
-            string post_data =
-                "email=" + Uri.EscapeUriString(email) +
-                "&password=" + Uri.EscapeUriString(password);
-            byte[] data = Encoding.ASCII.GetBytes(post_data);
-
-            var oauth_nonce = GetNonce();
-            var oauth_timestamp = GetTimeStamp();
-            var method = "POST";
-
-            string parameters =
-                "email=" + Uri.EscapeDataString(email) +
-                "&oauth_body_hash=" + oauth_body_hash +
-                "&oauth_consumer_key=" + client_id +
-                "&oauth_nonce=" + oauth_nonce +
-                "&oauth_signature_method=" + oauth_signature_method +
-                "&oauth_timestamp=" + oauth_timestamp +
-                "&oauth_token=" + oauth_token +
-                "&oauth_version=" + oauth_version +
-                "&password=" + Uri.EscapeDataString(password);
-
-            string base_string = method + "&" + Uri.EscapeDataString(auth_endpoint) + "&" + Uri.EscapeDataString(parameters);
-
-            string signed = CreateToken(base_string, client_secret + "&");
-            signed = Uri.EscapeDataString(signed);
-
-            string authorization_header =
-                "OAuth realm=\"\"" +
-                ", oauth_body_hash=\"" + oauth_body_hash + "\"" +
-                ", oauth_nonce=\"" + oauth_nonce + "\"" +
-                ", oauth_timestamp=\"" + oauth_timestamp + "\"" +
-                ", oauth_consumer_key=\"" + client_id + "\"" +
-                ", oauth_signature_method=\"" + oauth_signature_method + "\"" +
-                ", oauth_version=\"" + oauth_version + "\"" +
-                ", oauth_token=\"" + oauth_token + "\"" +
-                ", oauth_signature=\"" + signed + "\"";
-
-            WebRequest request = WebRequest.Create(auth_host + "/auth/api_login");
-            request.Method = "POST";
-            request.ContentType = "application/x-www-form-urlencoded";
-            request.Headers.Add("Authorization", authorization_header);
-            request.ContentLength = data.Length;
-            using (Stream stream = request.GetRequestStream())
+            var pd = "";
+            foreach (var kvp in postData)
             {
-                stream.Write(data, 0, data.Length);
+                if (pd.Length == 0)
+                    pd += kvp.Key + "=" + kvp.Value;
+                else
+                    pd += "&" + kvp.Key + "=" + kvp.Value;
             }
-
-            var jss = new JavaScriptSerializer();
-            var mySession = new MySession();
-            var json = DoRequest(request);
-            mySession.token = json["oauth_token"]["token"];
-            mySession.api_url = json["user"]["api_url"];
-            return mySession;
+            return Encoding.ASCII.GetBytes(pd);
         }
-
-        private static bool ListSubjects(MySession mySession)
+        
+        private static MyHeaders BuildHeaders(MySession mySession, 
+            string method,
+            string endPoint,
+            SortedDictionary<string, string> postData)
         {
             var device_data = "device_id=\"myDeviceId\", device_name=\"myDevice\", lat=\"38.1499\", lng=\"144.3617\"";
             var oauth_nonce = GetNonce();
             var oauth_timestamp = GetTimeStamp();
-            var subject_end_point = "/subject";
-            var method = "GET";
 
-            var parameters = 
-                "device_data=" + Uri.EscapeDataString(device_data) +
-                "&oauth_body_hash=" + oauth_body_hash +
-                "&oauth_consumer_key=" + client_id +
-                "&oauth_nonce=" + oauth_nonce +
-                "&oauth_signature_method=" + oauth_signature_method +
-                "&oauth_timestamp=" + oauth_timestamp +
-                "&oauth_token=" + mySession.token +
-                "&oauth_version=" + oauth_version;
+            postData.Add("device_data", Uri.EscapeDataString(device_data));
+            postData.Add("oauth_body_hash", oauth_body_hash);
+            postData.Add("oauth_consumer_key", client_id);
+            postData.Add("oauth_nonce", oauth_nonce);
+            postData.Add("oauth_signature_method", oauth_signature_method);
+            postData.Add("oauth_timestamp", oauth_timestamp);
+            postData.Add("oauth_token", mySession.token);
+            postData.Add("oauth_version", oauth_version);
 
-            var base_string = method + "&" + Uri.EscapeDataString(subject_end_point) + "&" + Uri.EscapeDataString(parameters);
+            var parameters = "";
+            foreach (KeyValuePair<string, string> param in postData)
+            {
+                if (parameters.Length == 0)
+                    parameters += param.Key + "=" + param.Value;
+                else
+                    parameters += "&" + param.Key + "=" + param.Value;
+            }
+            
+            var base_string = method + "&" + Uri.EscapeDataString(endPoint) + "&" + Uri.EscapeDataString(parameters);
             var signed = CreateToken(base_string, client_secret + "&");
             signed = Uri.EscapeDataString(signed);
             
             // Lets make a request to list all the subjects in the database
-            var authorization_header =
+            var authorization =
                 "OAuth realm=\"\"" +
                 ", oauth_body_hash=\"" + oauth_body_hash + "\"" +
                 ", oauth_nonce=\"" + oauth_nonce + "\"" +
@@ -181,16 +154,141 @@ namespace SmartVisFaceAPI
                 ", oauth_version=\"" + oauth_version + "\"" +
                 ", oauth_token=\"" + mySession.token + "\"" +
                 ", oauth_signature=\"" + signed + "\"";
+
+
+            MyHeaders myHeaders = new MyHeaders();
+            myHeaders.device_data = device_data;
+            myHeaders.authorization = authorization;
+            return myHeaders;
+        }
+        
+        
+        private static MySession Login()
+        {
+            string endpoint = "/auth/api_login";
+            var method = "POST";
+            var mySession = new MySession();
+            mySession.token = "a_single_token";
             
-            var subject_request = WebRequest.Create(mySession.api_url + subject_end_point);
-            subject_request.Method = method;
-            subject_request.Headers.Add("Device", device_data);
-            subject_request.Headers.Add("Authorization", authorization_header);
-            var json_object = DoRequest(subject_request);
-            Console.WriteLine("Subject Status: " + json_object["status"] + " Subject filtered #: " + json_object["data"]["total_filtered"] + " total #: " + json_object["data"]["total_number"]);
+            SortedDictionary<string, string> postData = new SortedDictionary<string, string>();
+            postData.Add("email", Uri.EscapeDataString(email));
+            postData.Add("password", Uri.EscapeDataString(password));
+            var postDataAsBytes = PostDataAsByteArray(postData);
+            var myHeaders = BuildHeaders(mySession, method, endpoint, postData);
+            
+
+            WebRequest request = WebRequest.Create(auth_host + endpoint);
+            request.Method = method;
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.Headers.Add("Device", myHeaders.device_data);
+            request.Headers.Add("Authorization", myHeaders.authorization);
+            request.ContentLength = postDataAsBytes.Length;
+            using (Stream stream = request.GetRequestStream())
+            {
+                stream.Write(postDataAsBytes, 0, postDataAsBytes.Length);
+            }
+            var jss = new JavaScriptSerializer();
+            var json = DoRequest(request);
+            mySession.token = json["oauth_token"]["token"];
+            mySession.api_url = json["user"]["api_url"];
+            return mySession;
+        }
+
+        
+        private static bool ListSubjects(MySession mySession)
+        {
+            var end_point = "/subject";
+            var method = "GET";
+            SortedDictionary<string, string> postData = new SortedDictionary<string, string>();
+            var myHeaders = BuildHeaders(mySession, method, end_point, postData);
+
+            
+            var request = WebRequest.Create(mySession.api_url + end_point);
+            request.Method = method;
+            request.Headers.Add("Device", myHeaders.device_data);
+            request.Headers.Add("Authorization", myHeaders.authorization);
+            var json_object = DoRequest(request);
+
+            if (ResponseOk(json_object))
+            {
+                Console.WriteLine("Subject Status: " + json_object["status"] + " Subject filtered #: " + json_object["data"]["total_filtered"] + " total #: " + json_object["data"]["total_number"]);
+            }
+            else
+            {
+                Console.WriteLine("Failed to list subjects: " + json_object["message"]);
+            }
+            
             return true;
         }
-       
+
+        
+        private static bool CreateWatchlist(MySession mySession, string watchlistName, string watchlistColour)
+        {
+            var end_point = "/watchlist";
+            var method = "POST";
+
+            SortedDictionary<string, string> postData = new SortedDictionary<string, string>();
+            postData.Add("name", Uri.EscapeDataString(watchlistName));
+            postData.Add("colour", Uri.EscapeDataString(watchlistColour));
+            var postDataAsBytes = PostDataAsByteArray(postData);
+            var myHeaders = BuildHeaders(mySession, method, end_point, postData);
+            
+            var request = WebRequest.Create(mySession.api_url + end_point);
+            request.Method = method;
+            request.Headers.Add("Device", myHeaders.device_data);
+            request.Headers.Add("Authorization", myHeaders.authorization);
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = postDataAsBytes.Length;
+            using (Stream stream = request.GetRequestStream())
+            {
+                stream.Write(postDataAsBytes, 0, postDataAsBytes.Length);
+            }
+
+            var json_object = DoRequest(request);
+            if (ResponseOk(json_object))
+            {
+                Console.WriteLine("Created Watchlist with id: " + json_object["data"]["watchlist"]["id"]);
+            }
+            else
+            {
+                Console.WriteLine("Failed to create watchlist: " + json_object["message"]);
+            }
+            return true;
+        }
+        
+        
+        private static bool CreateSubject(MySession mySession, string subjectName)
+        {
+            var end_point = "/subject";
+            var method = "POST";
+
+            SortedDictionary<string, string> postData = new SortedDictionary<string, string>();
+            postData.Add("name", Uri.EscapeDataString(subjectName));
+            var postDataAsBytes = PostDataAsByteArray(postData);
+            var myHeaders = BuildHeaders(mySession, method, end_point, postData);
+            
+            var request = WebRequest.Create(mySession.api_url + end_point);
+            request.Method = method;
+            request.Headers.Add("Device", myHeaders.device_data);
+            request.Headers.Add("Authorization", myHeaders.authorization);
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = postDataAsBytes.Length;
+            using (Stream stream = request.GetRequestStream())
+            {
+                stream.Write(postDataAsBytes, 0, postDataAsBytes.Length);
+            }
+
+            var json_data = DoRequest(request);
+            if (ResponseOk(json_data))
+            {
+                Console.WriteLine("Created subject with id: " + json_data["data"]["subject"]["subject_id"]);
+            }
+            else
+            {
+                Console.WriteLine("Failed to create subject: " + json_data["message"]);
+            }
+            return true;
+        }
         
         static void Main(string[] args)
         {
@@ -200,6 +298,12 @@ namespace SmartVisFaceAPI
 
             // List subjects...
             ListSubjects(mySession);
+            
+            // Create a watchlist
+            CreateWatchlist(mySession, "Yipee2", "#ff0000");
+            
+            // Create as subject 
+            CreateSubject(mySession, "John Smith");
         }
     }
 }
