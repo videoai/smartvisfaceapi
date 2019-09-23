@@ -1,2 +1,3 @@
-# smartvisfaceapi
-Examples in various languages for calling the SmartVis Face API
+# SmartVis API Examples 
+
+Some simple examples in using the SmartVis Face API in various languages.
