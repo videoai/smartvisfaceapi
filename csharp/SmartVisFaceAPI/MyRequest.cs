@@ -109,7 +109,6 @@ namespace SmartVisFaceAPI
             var authorization = m_session.Authorization(method, endPoint, formData);
             request.Headers.Add("Authorization", authorization);
 
-            byte[] result;
             byte[] buffer = new byte[4096];
             
             var bw = new BinaryWriter(new FileStream(filePath, FileMode.Create));
@@ -147,7 +146,7 @@ namespace SmartVisFaceAPI
                 }
                 catch (SmartVisFaceException e)
                 {
-                    Console.WriteLine("Trouble waiting for task!");
+                    Console.WriteLine("Trouble waiting for task! " + e.Message);
                     return taskData;
                 }
             }

@@ -57,7 +57,8 @@ namespace SmartVisFaceAPI
                 var faceLogImageData = new SortedDictionary<string, string>();
                 faceLogImageData.Add("compare_threshold", Uri.EscapeDataString("0.6"));
                 faceLogImageData.Add("recognition", Uri.EscapeDataString("true"));
-                var imagePath = "/home/kieron/src/smartvisfaceapi/csharp/SmartVisFaceAPI/images/kieron01.jpg";
+
+                var imagePath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) + "/kieron01.jpg";
                 var faceLogImage = myRequest.DoFaceLogImage(faceLogImageData, imagePath, true);
                 var numberOfSightings = faceLogImage["number_of_sightings"];
                 Console.WriteLine("Face Log Task: " + faceLogImage["job_id"] + " found " + numberOfSightings  +  " sightings");
